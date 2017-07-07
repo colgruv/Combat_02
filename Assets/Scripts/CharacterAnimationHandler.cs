@@ -125,12 +125,16 @@ public class CharacterAnimationHandler : MonoBehaviour
 
     private bool calculateJumping()
     {
-        bool jumping = mFPController.IsJumping;
-
+        bool jumping = false;
+        
         if (mFPController == null)
             mFPController = transform.parent.GetComponent<FirstPersonController>();
         if (mFPController != null)
         {
+            // Poll jumping status from FP Controller
+            jumping = mFPController.IsJumping;
+
+            // Update Animator booleans
             if (mAnimator == null)
                 mAnimator = GetComponent<Animator>();
             if (mAnimator != null)
@@ -142,20 +146,26 @@ public class CharacterAnimationHandler : MonoBehaviour
 
     private bool calculateAttacking()
     {
+        // Poll mouse input
+        bool blocking = Input.GetMouseButton(1);
         bool attacking = Input.GetMouseButton(0);
-
+        
+        // Update Animator booleans
         if (mAnimator == null)
             mAnimator = GetComponent<Animator>();
         if (mAnimator != null)
         {
+            mAnimator.SetBool("Blocking", blocking);
             mAnimator.SetBool("Attacking", attacking);
-            mAnimator.SetBool("Running", !attacking);
+            mAnimator.SetBool("Running", !(attacking||blocking));
         }
 
-        mFPController.WalkSpeed = attacking ? mDefaultWalkSpeed/4f : mDefaultWalkSpeed;
-        mFPController.RunSpeed = attacking ? mDefaultRunSpeed/4f : mDefaultRunSpeed;
-        mFPController.JumpSpeed = attacking ? mDefaultJumpSpeed/4f : mDefaultJumpSpeed;
+        // Slow movement if blocking or attacking
+        mFPController.WalkSpeed = (attacking||blocking) ? mDefaultWalkSpeed / 4f : mDefaultWalkSpeed;
+        mFPController.RunSpeed = (attacking || blocking) ? mDefaultRunSpeed / 4f : mDefaultRunSpeed;
+        mFPController.JumpSpeed = (attacking || blocking) ? mDefaultJumpSpeed / 4f : mDefaultJumpSpeed;
 
-        return attacking;
+        // Return true if blocking or attacking
+        return (attacking || blocking);
     }
 }
