@@ -20,7 +20,6 @@ public class CollisionDirection : MonoBehaviour
 
     void OnCollisionEnter(Collision _collision)
     {
-        Debug.Log("Collision Enter");
         DirectionIdentifier.position = _collision.contacts[0].point;
         DirectionIdentifier.forward = _collision.impulse * -1f;
         DirectionIdentifier.GetComponent<ParticleSystem>().Play();
