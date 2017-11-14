@@ -8,7 +8,10 @@ public class Billboard : MonoBehaviour {
 
     void Update()
     {
-        transform.forward = BillboardCamera.transform.forward;    
+        if (BillboardCamera)
+            transform.forward = BillboardCamera.transform.forward;
+        else
+            transform.forward = Camera.main.transform.forward;
     }
 
 }

@@ -6,17 +6,20 @@ public class AttackTarget : AttackObject
 {
     // UI Helpers
     public Transform HitIndicator;
-    public HealthBar HealthBar;
+    public HealthBar WorldHealthBar;
+    public static HealthBar ScreenHealthBar;
+    private HealthBar m_CurrentHealthBar;
+    public HealthBar CurrentHealthBar { set { m_CurrentHealthBar = value; } }
 
     // Hit Points
-    public float MaxGuard = 200f;
-    private float m_CurrentGuard;
-    public float MaxHealth = 50f;
-    private float m_CurrentHealth;
+    //public float MaxGuard = 200f;
+    //private float m_CurrentGuard;
+    //public float MaxHealth = 50f;
+    //private float m_CurrentHealth;
 
-    // Guard recharge
+    // Guard recharge (ToDo: Move to NetworkCharacterData)
     public float GuardRechargeDelay = 3f;
-    public float GuardRechargeSpeed = 10f;
+    public float GuardRechargeSpeed = 10f; 
     private float m_TimeSinceLastHit;
 
     // Flags
@@ -26,17 +29,19 @@ public class AttackTarget : AttackObject
     // Other Character Components
     private CharacterAnimationHandler m_AnimationHandler;
     private Collider m_Collider;
+    private NetworkCharacterData m_CharacterData;
 
 	// Use this for initialization
 	void Start ()
     {
         m_AnimationHandler = transform.parent.GetComponentInChildren<CharacterAnimationHandler>();
         m_Collider = GetComponent<Collider>();
+        m_CharacterData = transform.parent.GetComponent<NetworkCharacterData>();
 
         m_TimeSinceLastHit = 0f;
 
-        m_CurrentGuard = MaxGuard;
-        m_CurrentHealth = MaxHealth;
+        //m_CurrentGuard = MaxGuard;
+        //m_CurrentHealth = MaxHealth;
 
         m_IsAlive = true;
 
@@ -46,30 +51,45 @@ public class AttackTarget : AttackObject
 	// Update is called once per frame
 	void Update ()
     {
+        // (For now) Don't go past this point if we are dead
         if (!m_IsAlive)
             return;
 
-        if (m_CurrentHealth <= 0f)
+        // Check to see if we should die
+        if (m_CharacterData.GaugeAttributes.Health <= 0f)
         {
             Die();
             return;
         }
 
+        // Perform per-frame gauge recharge
         rechargeGuard();
 
-        if (HealthBar)
-            HealthBar.DisplayVitals((float)m_CurrentHealth / MaxHealth, (float)m_CurrentGuard / MaxGuard);
+        // Update gauge display
+        if (!m_CurrentHealthBar)
+        {
+            if (WorldHealthBar.gameObject.activeSelf)
+                m_CurrentHealthBar = WorldHealthBar;
+            else
+                m_CurrentHealthBar = ScreenHealthBar;
+        }
+        m_CurrentHealthBar.DisplayVitals(
+            m_CharacterData.GaugeAttributes.Health / m_CharacterData.GaugeAttributes.MaxHealth, 
+            m_CharacterData.GaugeAttributes.Guard / m_CharacterData.GaugeAttributes.MaxGuard);
 	}
 
     private void rechargeGuard()
     {
         m_TimeSinceLastHit += Time.deltaTime;
+        GaugeAttributes gAtt = m_CharacterData.GaugeAttributes;
 
         if (m_TimeSinceLastHit > GuardRechargeDelay)
         {
-            m_CurrentGuard += GuardRechargeSpeed * Time.deltaTime;
-            m_CurrentGuard = Mathf.Min(m_CurrentGuard, MaxGuard);
+            gAtt.Guard += GuardRechargeSpeed * Time.deltaTime;
+            gAtt.Guard = Mathf.Min(gAtt.Guard, gAtt.MaxGuard);
         }
+
+        m_CharacterData.GaugeAttributes = gAtt;
     }
 
     void OnTriggerEnter(Collider _other)
@@ -105,20 +125,23 @@ public class AttackTarget : AttackObject
     private bool resolveHit(AttackSource _attack)
     {
         m_TimeSinceLastHit = 0f;
-
-        float hitPool = m_CurrentGuard + _attack.Accuracy;
+        GaugeAttributes gAtt = m_CharacterData.GaugeAttributes;
+        float hitPool = gAtt.Guard + _attack.Accuracy;
         float hitRoll = Random.Range(0, hitPool);
-        if (hitRoll > m_CurrentGuard)
+
+        if (hitRoll > gAtt.Guard)
         {
             // Hit! Subtract from Health
-            m_CurrentHealth -= Random.Range(_attack.MinimumDamage, _attack.MaximumDamage);
+            gAtt.Health -= Random.Range(_attack.MinimumDamage, _attack.MaximumDamage);
+            m_CharacterData.GaugeAttributes = gAtt;
             return true;
         }
 
         // Miss! Subtract from Guard
-        m_CurrentGuard -= Random.Range(_attack.MinimumDamage, _attack.MaximumDamage);
+        gAtt.Guard -= Random.Range(_attack.MinimumDamage, _attack.MaximumDamage);
+        m_CharacterData.GaugeAttributes = gAtt;
 
-        // TODO: Determine whether the miss was a result of Block, Dodge, Parry, Armor, or Magic.
+        // TODO: Determine whether the miss was a result of Block, Dodge, Parry, Armor, or Absorb.
         _attack.GetComponentInChildren<WeaponClashBehaviour>().PlayClash();
 
         return false;
@@ -129,8 +152,8 @@ public class AttackTarget : AttackObject
     /// </summary>
     public void Die()
     {
-        if (HealthBar)
-            HealthBar.gameObject.SetActive(false);
+        if (m_CurrentHealthBar)
+            m_CurrentHealthBar.gameObject.SetActive(false);
 
         m_Collider.enabled = false;
         m_IsAlive = false;
@@ -143,13 +166,14 @@ public class AttackTarget : AttackObject
     public void Revive()
     {
         m_Collider.enabled = true;
-
-        HealthBar.gameObject.SetActive(true);
+        if (m_CurrentHealthBar)
+            m_CurrentHealthBar.gameObject.SetActive(true);
         m_IsAlive = true;
-
         m_AnimationHandler.OnRevive();
 
         // Set health to 1 to avoid the character immediately dying again
-        m_CurrentHealth = 1;
+        GaugeAttributes gAtt = m_CharacterData.GaugeAttributes;
+        gAtt.Health = 1;
+        m_CharacterData.GaugeAttributes = gAtt;
     }
 }

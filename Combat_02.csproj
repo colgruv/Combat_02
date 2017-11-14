@@ -148,6 +148,7 @@
     <Compile Include="Assets\Scripts\UI\ActionButton.cs" />
     <Compile Include="Assets\Scripts\UI\Billboard.cs" />
     <Compile Include="Assets\Scripts\UI\HealthBar.cs" />
+    <Compile Include="Assets\Scripts\UI\MainMenuHandler.cs" />
     <Compile Include="Assets\Scripts\VFX\Particles\ParticleGravitonBehaviour.cs" />
     <Compile Include="Assets\Scripts\VFX\WeaponClashBehaviour.cs" />
     <Compile Include="Assets\Scripts\VFX\WeaponTrailBehaviour.cs" />

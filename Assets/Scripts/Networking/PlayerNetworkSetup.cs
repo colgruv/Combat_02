@@ -36,7 +36,10 @@ public class PlayerNetworkSetup : NetworkBehaviour
         // Attack Target: Disable collider on AttackTarget and WorldHealthBar if local player
         AttackTarget attackTarget = GetComponentInChildren<AttackTarget>();
         attackTarget.GetComponent<Collider>().enabled = !isLocalPlayer;
-        attackTarget.HealthBar.enabled = false;
+        attackTarget.WorldHealthBar.transform.parent.gameObject.SetActive(!isLocalPlayer); // Also manages other overlay objects
+        //if (!AttackTarget.ScreenHealthBar)
+        //    AttackTarget.ScreenHealthBar = GameObject.FindGameObjectWithTag("Screen").GetComponentInChildren<HealthBar>();
+        //AttackTarget.ScreenHealthBar.gameObject.SetActive(isLocalPlayer);
 
         // Attack Sources: Only enable AttackSources on local player
         AttackSource[] attackSources = GetComponentsInChildren<AttackSource>();

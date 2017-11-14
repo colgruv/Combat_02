@@ -32,23 +32,25 @@ public struct CoreAttributes
     public float willpower;
 }
 
+
 public struct GaugeAttributes
 {
-    public float health;
-    public float maxHealth;
-    public float tempHealth;
+    [SyncVar]
+    public float Health;
+    public float MaxHealth;
+    public float TempHealth;
 
-    public float guard;
-    public float maxGuard;
-    public float tempGuard;
+    public float Guard;
+    public float MaxGuard;
+    public float TempGuard;
 
-    public float mana;
-    public float maxMana;
-    public float tempMana;
+    public float Mana;
+    public float MaxMana;
+    public float TempMana;
 
-    public float stamina;
-    public float maxStamina;
-    public float tempStamina;
+    public float Stamina;
+    public float MaxStamina;
+    public float TempStamina;
 }
 
 [NetworkSettings(channel = 2, sendInterval = 0.1f)]
@@ -58,8 +60,13 @@ public class NetworkCharacterData : NetworkBehaviour
     private int m_CharacterID;
     public int CharacterID { get { return m_CharacterID; } }
 
+    [SyncVar]
+    private string m_CharacterName;
+    public string CharacterName { get { return m_CharacterName; } }
+
     private CoreAttributes m_CoreAttributes;
     private GaugeAttributes m_GaugeAttributes;
+    public GaugeAttributes GaugeAttributes { get { return m_GaugeAttributes; } set { m_GaugeAttributes = value; } }
 
     // Ordered list of CombatEvents that are processed via CmdProcessCombatEvent
     private List<CombatEvent> m_CombatLog;
@@ -70,8 +77,9 @@ public class NetworkCharacterData : NetworkBehaviour
 
 	// Use this for initialization
 	void Start ()
-    { 
-
+    {
+        initializeMetadata();
+        initializeAttributes();
 	}
 	
 	// Update is called once per frame
@@ -80,10 +88,22 @@ public class NetworkCharacterData : NetworkBehaviour
 		
 	}
 
+    private void initializeMetadata()
+    {
+        if (isLocalPlayer)
+            m_CharacterName = PlayerPrefs.GetString("CharacterName");
+    }
+
     private void initializeAttributes()
     {
         m_CoreAttributes = new CoreAttributes();
         m_GaugeAttributes = new GaugeAttributes();
+
+        // [Temp] Default attribute initialization:
+        m_GaugeAttributes.MaxHealth = 50f;
+        m_GaugeAttributes.Health = m_GaugeAttributes.MaxHealth;
+        m_GaugeAttributes.MaxGuard = 200f;
+        m_GaugeAttributes.Guard = m_GaugeAttributes.MaxGuard;
     }
 
     [Command]
