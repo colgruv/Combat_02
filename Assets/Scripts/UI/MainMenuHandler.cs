@@ -24,10 +24,12 @@ public class MainMenuHandler : MonoBehaviour
         EnterGameButton.interactable = (m_CharacterName != "");
     }
 
-    public void EnterGame()
+    public void EnterGame(bool _server)
     {
         PlayerPrefs.SetString("CharacterName", m_CharacterName);
+        PlayerPrefs.SetInt("IsServer", (_server) ? 1 : 0);
 
         Debug.Log(PlayerPrefs.GetString("CharacterName"));
+        SceneManager.LoadScene(1);
     }
 }

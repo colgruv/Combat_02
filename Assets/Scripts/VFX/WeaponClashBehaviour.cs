@@ -13,9 +13,24 @@ public class WeaponClashBehaviour : MonoBehaviour
         m_ParticleSystem = GetComponent<ParticleSystem>();    
     }
 
-    public void PlayClash()
+    public void PlayClashEffect()
     {
         m_AudioSource.Play();
         m_ParticleSystem.Play();
+    }
+
+    public void PlayBleedEffect()
+    {
+
+    }
+
+    public void PlayBlockEffect()
+    {
+
+    }
+
+    public void PlayMissEffect()
+    {
+
     }
 }

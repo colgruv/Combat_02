@@ -5,45 +5,16 @@ using UnityEngine;
 public class AttackTarget : AttackObject
 {
     // UI Helpers
-    public Transform HitIndicator;
-    public HealthBar WorldHealthBar;
-    public static HealthBar ScreenHealthBar;
-    private HealthBar m_CurrentHealthBar;
-    public HealthBar CurrentHealthBar { set { m_CurrentHealthBar = value; } }
-
-    // Hit Points
-    //public float MaxGuard = 200f;
-    //private float m_CurrentGuard;
-    //public float MaxHealth = 50f;
-    //private float m_CurrentHealth;
-
-    // Guard recharge (ToDo: Move to NetworkCharacterData)
-    public float GuardRechargeDelay = 3f;
-    public float GuardRechargeSpeed = 10f; 
-    private float m_TimeSinceLastHit;
-
-    // Flags
-    private bool m_IsAlive;
-    public bool IsAlive { get { return m_IsAlive; } }
+    public AudioParticleEffect HitIndicator_Wound;
+    public AudioParticleEffect HitIndicator_Parry;
 
     // Other Character Components
-    private CharacterAnimationHandler m_AnimationHandler;
-    private Collider m_Collider;
     private NetworkCharacterData m_CharacterData;
 
 	// Use this for initialization
 	void Start ()
     {
-        m_AnimationHandler = transform.parent.GetComponentInChildren<CharacterAnimationHandler>();
-        m_Collider = GetComponent<Collider>();
         m_CharacterData = transform.parent.GetComponent<NetworkCharacterData>();
-
-        m_TimeSinceLastHit = 0f;
-
-        //m_CurrentGuard = MaxGuard;
-        //m_CurrentHealth = MaxHealth;
-
-        m_IsAlive = true;
 
         findOwner(transform);
     }
@@ -51,46 +22,10 @@ public class AttackTarget : AttackObject
 	// Update is called once per frame
 	void Update ()
     {
-        // (For now) Don't go past this point if we are dead
-        if (!m_IsAlive)
-            return;
+        
 
-        // Check to see if we should die
-        if (m_CharacterData.GaugeAttributes.Health <= 0f)
-        {
-            Die();
-            return;
-        }
-
-        // Perform per-frame gauge recharge
-        rechargeGuard();
-
-        // Update gauge display
-        if (!m_CurrentHealthBar)
-        {
-            if (WorldHealthBar.gameObject.activeSelf)
-                m_CurrentHealthBar = WorldHealthBar;
-            else
-                m_CurrentHealthBar = ScreenHealthBar;
-        }
-        m_CurrentHealthBar.DisplayVitals(
-            m_CharacterData.GaugeAttributes.Health / m_CharacterData.GaugeAttributes.MaxHealth, 
-            m_CharacterData.GaugeAttributes.Guard / m_CharacterData.GaugeAttributes.MaxGuard);
+        
 	}
-
-    private void rechargeGuard()
-    {
-        m_TimeSinceLastHit += Time.deltaTime;
-        GaugeAttributes gAtt = m_CharacterData.GaugeAttributes;
-
-        if (m_TimeSinceLastHit > GuardRechargeDelay)
-        {
-            gAtt.Guard += GuardRechargeSpeed * Time.deltaTime;
-            gAtt.Guard = Mathf.Min(gAtt.Guard, gAtt.MaxGuard);
-        }
-
-        m_CharacterData.GaugeAttributes = gAtt;
-    }
 
     void OnTriggerEnter(Collider _other)
     {
@@ -105,75 +40,71 @@ public class AttackTarget : AttackObject
 
         if (resolveHit(_other.GetComponent<AttackSource>()))
         {
-            triggerHitIndicator(_other);
+            triggerHitIndicator(HitIndicator_Wound);
+        }
+        else
+        {
+            triggerHitIndicator(HitIndicator_Parry);
         }
     }
 
     /// <summary>
-    /// [Deprecated] If a wound occurs, trigger the local HitIndicator object
+    /// Immediately play hit effects on AttackTargets belonging to remote players
     /// </summary>
-    /// <param name="_other">AttackSource collider, for orientation purposes.</param>
-    private void triggerHitIndicator(Collider _other)
+    /// <param name="_effect"></param>
+    private void triggerHitIndicator(AudioParticleEffect _effect)
     {
-        if (!HitIndicator)
-            return;
-
-        HitIndicator.forward = _other.transform.right * -1f;
-        HitIndicator.GetComponent<ParticleSystem>().Play();
+        _effect.Play();
     }
 
     private bool resolveHit(AttackSource _attack)
     {
-        m_TimeSinceLastHit = 0f;
-        GaugeAttributes gAtt = m_CharacterData.GaugeAttributes;
-        float hitPool = gAtt.Guard + _attack.Accuracy;
+        Debug.Log(m_CharacterData.Health);
+
+        float hitPool = m_CharacterData.Guard + _attack.Accuracy;
         float hitRoll = Random.Range(0, hitPool);
 
-        if (hitRoll > gAtt.Guard)
+        CombatEvent cEvent = new CombatEvent();
+        cEvent.attackerNetworkID = _attack.Owner.netId;
+        cEvent.defenderNetworkID = Owner.netId;
+
+        if (hitRoll > m_CharacterData.Guard)
         {
-            // Hit! Subtract from Health
-            gAtt.Health -= Random.Range(_attack.MinimumDamage, _attack.MaximumDamage);
-            m_CharacterData.GaugeAttributes = gAtt;
+            // Hit! Send Wound combatEvent type to Attacker's data
+            cEvent.type = CombatEvent.CombatEventType.WOUND;
+            cEvent.magnitude = Random.Range(_attack.MinimumDamage, _attack.MaximumDamage);
+            _attack.Owner.ClientAttackerReceiveCombatEvent(cEvent);
             return true;
         }
 
-        // Miss! Subtract from Guard
-        gAtt.Guard -= Random.Range(_attack.MinimumDamage, _attack.MaximumDamage);
-        m_CharacterData.GaugeAttributes = gAtt;
+        // Miss! Send Parry combatEvent type to Attacker's data
+        // TODO: Determine whether the miss was a result of Block, Dodge, Parry, Armor, or Absorb.
+        cEvent.type = CombatEvent.CombatEventType.PARRY;
+        cEvent.magnitude = Random.Range(_attack.MinimumDamage, _attack.MaximumDamage);
+        _attack.Owner.ClientAttackerReceiveCombatEvent(cEvent);
 
         // TODO: Determine whether the miss was a result of Block, Dodge, Parry, Armor, or Absorb.
-        _attack.GetComponentInChildren<WeaponClashBehaviour>().PlayClash();
+        _attack.GetComponentInChildren<WeaponClashBehaviour>().PlayClashEffect();
 
         return false;
     }
 
     /// <summary>
-    /// Modify any combat mechanic-related components to reflect a dead character.
+    /// TODO: Display VFX to indicate the reception of certain CombatEvents
     /// </summary>
-    public void Die()
+    /// <param name="_cEvent"></param>
+    public void ProcessLocalCombatEvent(CombatEvent _cEvent)
     {
-        if (m_CurrentHealthBar)
-            m_CurrentHealthBar.gameObject.SetActive(false);
-
-        m_Collider.enabled = false;
-        m_IsAlive = false;
-        m_AnimationHandler.OnDeath();
-    }
-
-    /// <summary>
-    /// Undo the changes made in die() and set character's Health to 1 by default
-    /// </summary>
-    public void Revive()
-    {
-        m_Collider.enabled = true;
-        if (m_CurrentHealthBar)
-            m_CurrentHealthBar.gameObject.SetActive(true);
-        m_IsAlive = true;
-        m_AnimationHandler.OnRevive();
-
-        // Set health to 1 to avoid the character immediately dying again
-        GaugeAttributes gAtt = m_CharacterData.GaugeAttributes;
-        gAtt.Health = 1;
-        m_CharacterData.GaugeAttributes = gAtt;
-    }
+        switch(_cEvent.type)
+        {
+            case CombatEvent.CombatEventType.PARRY:
+                break;
+            case CombatEvent.CombatEventType.BLOCK:
+                break;
+            case CombatEvent.CombatEventType.DODGE:
+                break;
+            case CombatEvent.CombatEventType.WOUND:
+                break;
+        }
+    }   
 }

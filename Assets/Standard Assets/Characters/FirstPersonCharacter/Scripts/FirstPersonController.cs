@@ -106,31 +106,36 @@ namespace UnityStandardAssets.Characters.FirstPerson
 
             // get a normal for the surface that is being touched to move along it
             RaycastHit hitInfo;
-            Physics.SphereCast(transform.position, m_CharacterController.radius, Vector3.down, out hitInfo,
-                               m_CharacterController.height/2f, Physics.AllLayers, QueryTriggerInteraction.Ignore);
-            desiredMove = Vector3.ProjectOnPlane(desiredMove, hitInfo.normal).normalized;
+            //Physics.SphereCast(transform.position, m_CharacterController.radius, Vector3.down, out hitInfo,
+            //                   m_CharacterController.height/2f, Physics.AllLayers, QueryTriggerInteraction.Ignore);
+            //desiredMove = Vector3.ProjectOnPlane(desiredMove, hitInfo.normal).normalized;
 
             m_MoveDir.x = desiredMove.x*speed;
             m_MoveDir.z = desiredMove.z*speed;
+            m_MoveDir.y = desiredMove.y * speed;
 
 
-            if (m_CharacterController.isGrounded)
-            {
-                m_MoveDir.y = -m_StickToGroundForce;
+            //if (m_CharacterController.isGrounded)
+            //{
+            //    m_MoveDir.y = -m_StickToGroundForce;
 
-                if (m_Jump)
-                {
-                    m_MoveDir.y = m_JumpSpeed;
-                    PlayJumpSound();
-                    m_Jump = false;
-                    m_Jumping = true;
-                }
-            }
+            //    if (m_Jump)
+            //    {
+            //        m_MoveDir.y = m_JumpSpeed;
+            //        PlayJumpSound();
+            //        m_Jump = false;
+            //        m_Jumping = true;
+            //    }
+            //}
+            //else
+            //{
+            //    m_MoveDir += Physics.gravity*m_GravityMultiplier*Time.fixedDeltaTime;
+            //}
+
+            if (m_CharacterController.enabled)
+                m_CollisionFlags = m_CharacterController.Move(m_MoveDir * Time.fixedDeltaTime);
             else
-            {
-                m_MoveDir += Physics.gravity*m_GravityMultiplier*Time.fixedDeltaTime;
-            }
-            m_CollisionFlags = m_CharacterController.Move(m_MoveDir*Time.fixedDeltaTime);
+                m_CollisionFlags = CollisionFlags.None;
 
             ProgressStepCycle(speed);
             UpdateCameraPosition(speed);

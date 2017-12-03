@@ -10,7 +10,7 @@ public class Billboard : MonoBehaviour {
     {
         if (BillboardCamera)
             transform.forward = BillboardCamera.transform.forward;
-        else
+        else if (Camera.main)
             transform.forward = Camera.main.transform.forward;
     }
 

@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 
+/// <summary>
+/// Obsolete: Setup moved to networkPlayerSetup() in NetworkCharacterData()
+/// </summary>
 public class PlayerNetworkSetup : NetworkBehaviour
 {
-
 	// Use this for initialization
 	void Start ()
     {
@@ -33,17 +35,17 @@ public class PlayerNetworkSetup : NetworkBehaviour
             listener.enabled = isLocalPlayer;
         }
 
-        // Attack Target: Disable collider on AttackTarget and WorldHealthBar if local player
+        // Attack Target: Disable attack target collider, but enable world-space health bar
         AttackTarget attackTarget = GetComponentInChildren<AttackTarget>();
-        attackTarget.GetComponent<Collider>().enabled = !isLocalPlayer;
-        attackTarget.WorldHealthBar.transform.parent.gameObject.SetActive(!isLocalPlayer); // Also manages other overlay objects
+        attackTarget.GetComponent<Collider>().enabled = isLocalPlayer;
+        //attackTarget.WorldHealthBar.transform.parent.gameObject.SetActive(!isLocalPlayer); // Also manages other overlay objects
         //if (!AttackTarget.ScreenHealthBar)
         //    AttackTarget.ScreenHealthBar = GameObject.FindGameObjectWithTag("Screen").GetComponentInChildren<HealthBar>();
         //AttackTarget.ScreenHealthBar.gameObject.SetActive(isLocalPlayer);
 
-        // Attack Sources: Only enable AttackSources on local player
+        // Attack Sources: Only enable AttackSources on remote player
         AttackSource[] attackSources = GetComponentsInChildren<AttackSource>();
-        if (!isLocalPlayer)
+        if (isLocalPlayer)
         {
             foreach (AttackSource source in attackSources)
                 Component.Destroy(source.GetComponent<Collider>());

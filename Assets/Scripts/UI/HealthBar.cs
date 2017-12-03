@@ -5,6 +5,8 @@ using UnityEngine.UI;
 
 public class HealthBar : MonoBehaviour
 {
+    public bool IsScreenHealthBar = false;
+
     public RectTransform HealthFill;
     public RectTransform GuardFill;
 
@@ -14,6 +16,10 @@ public class HealthBar : MonoBehaviour
 	void Start ()
     {
         m_MaxWidth = HealthFill.sizeDelta.x;
+
+        // Give NetworkCharacterData components access to this component if it's on the HUD
+        if (IsScreenHealthBar)
+            NetworkCharacterData.ScreenHealthBar = this;
 	}
 	
 	// Update is called once per frame
