@@ -26,9 +26,7 @@ public struct CombatEvent
     public float timeStamp;
 }
 
-public class CombatLogSync : SyncListStruct<CombatEvent>
-{
-}
+
 
 [NetworkSettings(channel = 0, sendInterval = 0.1f)]
 public class NetworkCharacterData : NetworkBehaviour
@@ -85,7 +83,8 @@ public class NetworkCharacterData : NetworkBehaviour
     //private CoreAttributes m_CoreAttributes;
 
     // Server combat log stores incoming CombatEvents; ClientCombatLog keeps track of which events have been processed on the Client
-    private CombatLogSync m_ServerCombatLog;
+    public class SyncListCombatLog : SyncListStruct<CombatEvent> { }
+    private SyncListCombatLog m_ServerCombatLog = new SyncListCombatLog();
     private List<CombatEvent> m_ClientCombatLog;
     public float CombatEventLifetime = 120f;
 
@@ -120,6 +119,28 @@ public class NetworkCharacterData : NetworkBehaviour
         updateHealthBars();
     }
 
+    /// <summary>
+    /// Client initialization
+    /// </summary>
+    public override void OnStartClient()
+    {
+        base.OnStartClient();
+
+        m_ClientCombatLog = new List<CombatEvent>();
+    }
+
+    /// <summary>
+    /// Server initialization
+    /// </summary>
+    public override void OnStartServer()
+    {
+        base.OnStartServer();
+    }
+
+    /// <summary>
+    /// Initialize all member variables accounting for whether this is a Client or Server entity
+    /// TODO: Move initialization to OnStartServer and OnStartClient
+    /// </summary>
     private void playerNetworkSetup()
     {
         // Only enable the first-person controller on the local player
@@ -165,12 +186,6 @@ public class NetworkCharacterData : NetworkBehaviour
         if (isLocalPlayer)
             CmdSetServerCharacterName(PlayerPrefs.GetString("CharacterName"));
 
-        // Initialize both Server and Client CombatLogs
-        if (isServer)
-            m_ServerCombatLog = new CombatLogSync();
-        else
-            m_ClientCombatLog = new List<CombatEvent>();
-
         // Initialize attributes on the server; they should sync to the client
         initializeAttributes(isServer);
     }
@@ -212,7 +227,7 @@ public class NetworkCharacterData : NetworkBehaviour
 
     private void updateHealthBars()
     {
-        Debug.Log("Update health bars: " + m_Health + ", " + m_Guard);
+        //Debug.Log("Update health bars: " + m_Health + ", " + m_Guard);
 
         // Update gauge display
         if (!m_CurrentHealthBar)
@@ -223,7 +238,7 @@ public class NetworkCharacterData : NetworkBehaviour
                 m_CurrentHealthBar = ScreenHealthBar;
         }
 
-        Debug.Log(m_CurrentHealthBar.name);
+        //Debug.Log(m_CurrentHealthBar.name);
 
         m_CurrentHealthBar.DisplayVitals(
             m_Health / m_MaxHealth,
@@ -275,11 +290,20 @@ public class NetworkCharacterData : NetworkBehaviour
     /// </summary>
     private void syncClientCombatLog()
     {
+        // Only perform on the Client
+        if (isServer)
+            return;
+        
         // Starts after the end of the ClientCombatLog and iterates through the end of the ServerCombatLog.
         // If the two are the same length, this loop should exit immediately.
         int count = m_ClientCombatLog.Count;
+
+        Debug.Log(m_ServerCombatLog.Count);
+
         for (int i = count; i < m_ServerCombatLog.Count; i++)
         {
+            Debug.Log("New ServerCombatLog item: " + m_ServerCombatLog[i]);
+
             // Add the CombatEvent to the ClientCombatLog
             m_ClientCombatLog.Add(m_ServerCombatLog[i]);
 
@@ -312,7 +336,9 @@ public class NetworkCharacterData : NetworkBehaviour
         Debug.Log("CmdServerAttackerReceiveCombatEvent");
 
         // Log the combat event for the attacker
+        Debug.Log(m_ServerCombatLog);
         m_ServerCombatLog.Add(_cEvent);
+        Debug.Log(m_ServerCombatLog.Count);
 
         // Find the Server-Side Defender and send the combat event to it.
         NetworkCharacterData defender = NetworkServer.FindLocalObject(_cEvent.defenderNetworkID).GetComponent<NetworkCharacterData>();
@@ -361,6 +387,8 @@ public class NetworkCharacterData : NetworkBehaviour
     /// </summary>
     public void Die()
     {
+        Debug.Log("Die");
+
         if (m_CurrentHealthBar)
             m_CurrentHealthBar.gameObject.SetActive(false);
 

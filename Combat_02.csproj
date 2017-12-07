@@ -285,6 +285,7 @@
     <Compile Include="Assets\Scripts\Networking\NetworkConnectionSetup.cs" />
     <Compile Include="Assets\Scripts\Networking\PlayerNetworkAnimator.cs" />
     <Compile Include="Assets\Scripts\Networking\PlayerNetworkSetup.cs" />
+    <Compile Include="Assets\Scripts\Networking\ServerComponentManager.cs" />
     <Compile Include="Assets\Scripts\Networking\ServerSpectator.cs" />
     <Compile Include="Assets\Scripts\Test\CollisionDirection.cs" />
     <Compile Include="Assets\Scripts\UI\ActionBarHandler.cs" />

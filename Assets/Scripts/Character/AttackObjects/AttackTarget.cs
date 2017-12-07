@@ -84,7 +84,7 @@ public class AttackTarget : AttackObject
         _attack.Owner.ClientAttackerReceiveCombatEvent(cEvent);
 
         // TODO: Determine whether the miss was a result of Block, Dodge, Parry, Armor, or Absorb.
-        _attack.GetComponentInChildren<WeaponClashBehaviour>().PlayClashEffect();
+        //_attack.GetComponentInChildren<WeaponClashBehaviour>().PlayClashEffect();
 
         return false;
     }
@@ -98,12 +98,14 @@ public class AttackTarget : AttackObject
         switch(_cEvent.type)
         {
             case CombatEvent.CombatEventType.PARRY:
+                triggerHitIndicator(HitIndicator_Parry);
                 break;
             case CombatEvent.CombatEventType.BLOCK:
                 break;
             case CombatEvent.CombatEventType.DODGE:
                 break;
             case CombatEvent.CombatEventType.WOUND:
+                triggerHitIndicator(HitIndicator_Wound);
                 break;
         }
     }   
